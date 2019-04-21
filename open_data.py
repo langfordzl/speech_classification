@@ -26,7 +26,7 @@ print(folders)
 
 train_audio_path = 'train/audio'
 train_labels = os.listdir(train_audio_path)
-print(f'Number of labels: {len(train_labels)}')
+print ('Number of labels: {len(train_labels)}')
 
 wavs = []
 labels = []
