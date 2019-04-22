@@ -26,7 +26,7 @@ print(folders)
 
 train_audio_path = 'train/audio'
 train_labels = os.listdir(train_audio_path)
-print ('Number of labels: {len(train_labels)}')
+print ('Number of labels:', len(train_labels))
 
 wavs = []
 labels = []
@@ -99,24 +99,26 @@ for i, file in enumerate(files):
     path = str(train_audio_path) + '/' + label + '/' + file
     paths.append(path)
 
-import cv2
+from PIL import Image
 def spectrogram(path):
     eps=1e-10
     sample_rate, samples = wavfile.read(path)
     frequencies, times, spectrogram = signal.stft(samples, sample_rate, nperseg = sample_rate/50, noverlap = sample_rate/75)
     img = np.log(np.abs(spectrogram).T+eps)
-    img = cv2.resize(img,(151,161))
+    im = Image.fromarray(img)
+    img = im.resize((161,151), Image.ANTIALIAS)
+    img = np.asarray(img)
     return img
 
 
 x = np.empty((0, 151, 161))  
 x.shape     
 for i, file in enumerate(paths):
+    print (i)
     img = spectrogram(file)
-    print (img.shape)
     x = np.append(x, [img], axis=0)
 
-        
+x2 = np.expand_dims(x, axis=3)        
 
 
 ########################################################################
@@ -141,7 +143,7 @@ print ("Ytest", np.array(np.unique(ytrain, return_counts=True)).T)
 ########################################################################
 # CNN Training
 batch_size = 64
-num_classes = 30
+num_classes = len(y)
 epochs = 12
 
 import keras
@@ -163,11 +165,11 @@ model.add(Dense(128, activation='relu'))
 model.add(Dropout(0.5))
 model.add(Dense(num_classes, activation='softmax'))
 
-model.compile(loss=keras.losses.categorical_crossentropy,
+model.compile(loss=keras.losses.sparse_categorical_crossentropy,
               optimizer=keras.optimizers.Adadelta(),
               metrics=['accuracy'])
 
-model.fit(xtrain, ytrain,
+history = model.fit(xtrain, ytrain,
           batch_size=batch_size,
           epochs=epochs,
           verbose=1,
@@ -176,6 +178,17 @@ model.fit(xtrain, ytrain,
 score = model.evaluate(xtest, ytest, verbose=0)
 print('Test loss:', score[0])
 print('Test accuracy:', score[1])
+
+# list all data in history
+print(history.history.keys())
+# summarize history for accuracy
+plt.plot(history.history['acc'])
+plt.plot(history.history['val_acc'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.show()
 
 ########################################################################
 ########################################################################
