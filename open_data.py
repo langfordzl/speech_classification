@@ -44,56 +44,40 @@ train = pd.DataFrame({'file':wavs,'label':labels})
 train.info()
 label = train.label.unique()
 
+# let's grab two classes
+label2 = label[2:4]
 y = list()
 for i in range(len(labels)):
-    for j in range(len(label)):
-        if labels[i] == label[j]:
+    for j in range(len(label2)):
+        if labels[i] == label2[j]:
             y.append(j)
             print (j)
 
 y = np.asarray(y)
 print (np.array(np.unique(y, return_counts=True)).T)   
 
- 
-'''
-bed
-bird
-cat
-dog
-down
-eight
-five
-four
-go
-happy
-house
-left
-marvin
-nine
-no
-off
-on
-one
-right
-seven
-sheila
-six
-stop
-three
-tree
-two
-up
-wow
-yes
-zero
-'''
+# Let's subset x data
+train0 = train.file[train.label=='cat']
+train1 = train.file[train.label=='dog']
+df_train = pd.concat([train0,train1], axis=0)
 
-files = train.file
-files = files.values.tolist()
+files0 = train0.values.tolist()
+files1 = train1.values.tolist()
+files = files0 + files1
+
+label0 = train.label[train.label=='cat']
+label1 = train.label[train.label=='dog']
+df_labels = pd.concat([label0,label1], axis=0)
+
+df_train = pd.concat([df_train,df_labels], axis=1)
+
+label0 = label0.values.tolist()
+label1 = label1.values.tolist()
+labels = label0 + label1
 
 paths = list()
 for i, file in enumerate(files):
-    print(i)
+    print(file)
     label = labels[i]
     file = files[i]
     path = str(train_audio_path) + '/' + label + '/' + file
@@ -118,9 +102,17 @@ for i, file in enumerate(paths):
     img = spectrogram(file)
     x = np.append(x, [img], axis=0)
 
+<<<<<<< HEAD
+x = np.expand_dims(x, axis=3)        
+=======
 x2 = np.expand_dims(x, axis=3)        
+>>>>>>> c62feaadde2ac46e429e348b4fc114c6dc58126d
 
+np.save('xdata.npy',x)
+np.save('ydata.npy',y)
 
+x = np.load('xdata.npy')
+y = np.load('ydata.npy')
 ########################################################################
 ########################################################################
 # Split data for training
@@ -128,30 +120,41 @@ from sklearn.metrics import classification_report
 from imblearn.datasets import make_imbalance
 from sklearn.model_selection import train_test_split
 
-# Split data train, test, validation
-xtrain, xtest, ytrain, ytest = train_test_split(x, y, test_size=0.2, random_state=1)
-xtrain, xval, ytrain, yval = train_test_split(xtrain, ytrain, test_size=0.2, random_state=1)
+print ("Y", np.array(np.unique(y, return_counts=True)).T) 
+x = x.reshape(x.shape[0],x.shape[1]*x.shape[2]*x.shape[3])
+x_imb, y_imb = make_imbalance(x, y, ratio={0: 1733, 1: 500}, random_state=0)
+x = x.reshape(x.shape[0], 151, 161, 1)
+x_imb = x_imb.reshape(x_imb.shape[0], 151, 161, 1)
+
+# Split data train, test, validation (25 samples per class)
+xtrain, xtest, ytrain, ytest = train_test_split(x_imb, y_imb, test_size=0.25, random_state=1)
+xtrain, xval, ytrain, yval = train_test_split(xtrain, ytrain, test_size=0.05, random_state=1)
 
 # print counts
 print ("Ytrain", np.array(np.unique(ytrain, return_counts=True)).T) 
-print ("Ytest", np.array(np.unique(ytrain, return_counts=True)).T)
-   
-#xtrain, ytrain = make_imbalance(xtrain, ytrain, ratio={0: 1709813, 1: 104796, 2: 0}, random_state=0)
+print ("Ytest", np.array(np.unique(ytest, return_counts=True)).T)
+print ("Yval", np.array(np.unique(yval, return_counts=True)).T)
 
 
 ########################################################################
 ########################################################################
 # CNN Training
+<<<<<<< HEAD
+
+num_classes = np.max(ytrain)+1
+=======
 batch_size = 64
 num_classes = len(y)
 epochs = 12
+>>>>>>> c62feaadde2ac46e429e348b4fc114c6dc58126d
 
 import keras
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Flatten
 from keras.layers import Conv2D, MaxPooling2D
+from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 
-input_shape = (161, 151, 1)
+input_shape = (151, 161, 1)
 
 model = Sequential()
 model.add(Conv2D(32, kernel_size=(3, 3),
@@ -169,15 +172,40 @@ model.compile(loss=keras.losses.sparse_categorical_crossentropy,
               optimizer=keras.optimizers.Adadelta(),
               metrics=['accuracy'])
 
+<<<<<<< HEAD
+earlyStopping = EarlyStopping(monitor='val_loss', patience=25, verbose=1, mode='min')
+mcp_save = ModelCheckpoint('.mdl_wts.hdf5', save_best_only=True, monitor='val_loss', mode='min')
+#reduce_lr_loss = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=7, verbose=1, epsilon=1e-4, mode='min')
+
+history = model.fit(xtrain, ytrain,
+          batch_size=32,
+          epochs=25,
+=======
 history = model.fit(xtrain, ytrain,
           batch_size=batch_size,
           epochs=epochs,
+>>>>>>> c62feaadde2ac46e429e348b4fc114c6dc58126d
           verbose=1,
-          validation_data=(xtest, ytest))
+          validation_data=(xtest, ytest),
+          callbacks=[earlyStopping, mcp_save])
 
-score = model.evaluate(xtest, ytest, verbose=0)
-print('Test loss:', score[0])
-print('Test accuracy:', score[1])
+
+y_pred = model.predict(xtest)
+y_pred = np.argmax(y_pred, axis=-1)
+target_names = ['class 0', 'class 1']
+print(classification_report(ytest, y_pred, target_names=target_names))
+
+
+# list all data in history
+print(history.history.keys())
+# summarize history for accuracy
+plt.plot(history.history['acc'])
+plt.plot(history.history['val_acc'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.show()
 
 # list all data in history
 print(history.history.keys())
@@ -193,9 +221,9 @@ plt.show()
 ########################################################################
 ########################################################################
 # Plots
-fig, ax = plt.subplots(figsize=(16, 8))
-sns.countplot(ax=ax, x="label", data=train)
-print(train.label.unique())
+fig, ax = plt.subplots(figsize=(8, 8))
+sns.countplot(ax=ax, x="label", data=df_train)
+print(df_train.label.unique())
 
 plt.close()
 
@@ -207,12 +235,13 @@ def spectrogram2(file, label):
 
 
 num_samples = 5
-label = train.label.unique()
-fig, axes = plt.subplots(len(labels),num_samples, figsize = (16, len(labels)*4))
-for i,label in enumerate(labels):
-    files = train[train.label==label].file.sample(num_samples)
-    axes[i][0].set_title(label)
+label = df_train.label.unique()
+fig, axes = plt.subplots(len(label),num_samples, figsize = (16, len(label)*4))
+for i,labels in enumerate(label):
+    files = df_train[df_train.label==labels].file.sample(num_samples)
+    axes[i][0].set_title(labels)
     for j, file in enumerate(files):
-        specgram = spectrogram2(file, label)
+        specgram = spectrogram2(file, labels)
+        print (specgram.shape)
         axes[i][j].axis('off')
         axes[i][j].matshow(specgram)
