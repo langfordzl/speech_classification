@@ -41,8 +41,6 @@ from tqdm import tqdm
 from reweight import get_model, reweight_random, reweight_autodiff, reweight_hard_mining
 from logger import get as get_logger
 
-from keras.datasets import mnist
-
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 tf.logging.set_verbosity(tf.logging.ERROR)
 
@@ -74,7 +72,7 @@ def RegisterExp(name):
 
 
 LR = 0.001
-NUM_STEPS = 4000
+NUM_STEPS = 2000
 
 ###############################################################################
 ###############################################################################
@@ -153,17 +151,17 @@ def get_imbalance_dataset(x_train,
                           nval=10,
                           ntest=500,
                           seed=0,
-                          class_0=2,
-                          class_1=3):
+                          class_0=4,
+                          class_1=9):
     rnd = np.random.RandomState(seed)
     # In training, we have 10% 4 and 90% 9.
     # In testing, we have 50% 4 and 50% 9.
     ratio = 1 - pos_ratio
     ratio_test = 0.5
-    unique, counts = np.unique(y_train, return_counts=True)
-    print ("Ytrain", np.asarray((unique, counts)).T)
-    unique, counts = np.unique(y_test, return_counts=True)
-    print ("Ytest", np.asarray((unique, counts)).T)    
+    #x_train = mnist.train.images
+    #y_train = mnist.train.labels
+    #x_test = mnist.test.images
+    #y_test = mnist.test.labels
     x_train_0 = x_train[y_train == class_0]
     x_test_0 = x_test[y_test == class_0]
     # First shuffle, negative.
@@ -198,6 +196,12 @@ def get_imbalance_dataset(x_train,
         print('Number of train positive classes', ntrainsmall_pos)
         print('Number of val positive classes', nvalsmall_pos)
     y_train_subset = np.concatenate([np.zeros([x_train_0.shape[0]]), np.ones([x_train_1.shape[0]])])
+    unique, counts = np.unique(y_train_subset, return_counts=True)
+    print ("Ytrain_subset \n", np.asarray((unique, counts)).T)
+    my_list = np.asarray((unique, counts)).T
+    with open('your_file.txt', 'w') as f:
+        for item in my_list:
+            f.write("%s\n" % item)
     y_val_subset = np.concatenate([np.zeros([x_val_0.shape[0]]), np.ones([x_val_1.shape[0]])])
     y_test_subset = np.concatenate([np.zeros([x_test_0.shape[0]]), np.ones([x_test_1.shape[0]])])
     y_train_pos_subset = np.ones([x_train_1.shape[0]])
@@ -220,15 +224,6 @@ def get_imbalance_dataset(x_train,
     rnd.shuffle(idx)
     x_test_subset = x_test_subset[idx]
     y_test_subset = y_test_subset[idx]
-    unique, counts = np.unique(y_train_subset, return_counts=True)
-    print ("Ytrain_subset", np.asarray((unique, counts)).T)
-    unique, counts = np.unique(y_test_subset, return_counts=True)
-    print ("Ytest_subset", np.asarray((unique, counts)).T)   
-    unique, counts = np.unique(y_val_subset, return_counts=True)
-    print ("Yval_subset", np.asarray((unique, counts)).T)
-    print ("x_train_subset", x_train_subset.shape)  
-    print ("x_test_subset", x_test_subset.shape) 
-    train_set = DataSet(x_train_subset * 255.0, y_train_subset)    
     train_set = DataSet(x_train_subset * 255.0, y_train_subset)
     train_pos_set = DataSet(x_train_pos_subset * 255.0, y_train_pos_subset)
     train_neg_set = DataSet(x_train_neg_subset * 255.0, y_train_neg_subset)
@@ -264,7 +259,9 @@ def evaluate(sess, x_, y_, acc_, train_set, test_set):
     test_bsize = 100
     for step in six.moves.xrange(500 // test_bsize):
         x_test, y_test = test_set.next_batch(test_bsize)
+        print ("Y test", y_test)
         acc = sess.run(acc_, feed_dict={x_: x_test, y_: y_test})
+        print ("Acc test", acc)
         acc_test_sum += acc
     train_acc = acc_sum / float(5000 // train_bsize)
     test_acc = acc_test_sum / float(500 // test_bsize)
@@ -275,6 +272,22 @@ def get_acc(logits, y):
     prediction = tf.cast(tf.sigmoid(logits) > 0.5, tf.float32)
     return tf.reduce_mean(tf.cast(tf.equal(prediction, y), tf.float32))
 
+from sklearn.metrics import classification_report
+
+def evaluate2(sess, x_, y_, pred_, test_set):
+    # Calculate final results.
+    test_bsize = 100
+    for step in six.moves.xrange(500 // test_bsize):
+        x_test, y_test = test_set.next_batch(test_bsize)
+        pred = sess.run(pred_, feed_dict={x_: x_test, y_: y_test})
+        print ("Pred test", pred)
+        print(classification_report(y_test, pred))
+        
+    
+
+def get_pred(logits):
+    pred = tf.cast(tf.sigmoid(logits) > 0.5, tf.float32)
+    return pred
 
 def run(dataset, exp_name, seed, verbose=True):
     pos_ratio = FLAGS.pos_ratio
@@ -288,6 +301,8 @@ def run(dataset, exp_name, seed, verbose=True):
     with tf.Graph().as_default(), tf.Session() as sess:
         config = exp_repo[exp_name]()
         bsize = config.bsize
+        #train_set, val_set, test_set, train_pos_set, train_neg_set = get_imbalance_dataset(
+        #    dataset, pos_ratio=pos_ratio, ntrain=ntrain, nval=config.nval, ntest=ntest, seed=seed)
         train_set, val_set, test_set, train_pos_set, train_neg_set = get_imbalance_dataset(
             dataset[0],
             dataset[1],
@@ -322,6 +337,7 @@ def run(dataset, exp_name, seed, verbose=True):
                 ex_wts=ex_wts_,
                 reuse=True)
             acc_ = get_acc(logits_eval, y_)
+            pred_ = get_pred(logits_eval)
         # Build reweighting model.
         if config.reweight:
             if config.random:
@@ -382,6 +398,7 @@ def run(dataset, exp_name, seed, verbose=True):
                 })
             if (step + 1) % 100 == 0:
                 train_acc, test_acc = evaluate(sess, x_, y_, acc_, train_set, test_set)
+                evaluate2(sess, x_, y_, pred_, test_set)
                 if verbose:
                     print('Step', step + 1, 'Loss', loss, 'Train acc', train_acc, 'Test acc',
                           test_acc)
@@ -400,6 +417,7 @@ def run(dataset, exp_name, seed, verbose=True):
     return train_acc, test_acc
 
 
+from keras.datasets import mnist
 (x_train, y_train), (x_test, y_test) = mnist.load_data()
 x_train = x_train.astype('float32')
 x_test = x_test.astype('float32')
@@ -411,15 +429,24 @@ x_test = x_test.reshape(x_test.shape[0], 28*28)
 mnist2 = (x_train, y_train, x_test, y_test)
 train_acc, test_acc = run(mnist2, 'ours', seed=0)
 
-mnist2 = input_data.read_data_sets("data/mnist", one_hot=False)
-xtrain = mnist.train.images
-ytrain = mnist.train.labels
-xtest = mnist.test.images
-ytest = mnist.test.labels
-mnist2 = (xtrain, ytrain, xtest, ytest)
-train_acc, test_acc = run(mnist2, 'baseline', seed=0)
+
+train_set, val_set, test_set, train_pos_set, train_neg_set = get_imbalance_dataset(
+            mnist2[0],
+            mnist2[1],
+            mnist2[2],
+            mnist2[3],
+            pos_ratio=0.99, 
+            ntrain=5000, 
+            nval=10, 
+            ntest=500, 
+            seed=0)
 
 
+for step in six.moves.xrange(500 // 100):
+    x_test2, y_test2 = test_set.next_batch(100)
+    print (y_test2.shape)
+        
+        
 def run_many(dataset, exp_name):
     train_acc_list = []
     test_acc_list = []
@@ -428,6 +455,7 @@ def run_many(dataset, exp_name):
             dataset, exp_name, (trial * 123456789) % 100000, verbose=FLAGS.verbose)
         train_acc_list.append(train_acc)
         test_acc_list.append(test_acc)
+
     train_acc_list = np.array(train_acc_list)
     test_acc_list = np.array(test_acc_list)
     print(exp_name, 'Train acc {:.3f}% ({:.3f}%)'.format(train_acc_list.mean() * 100.0,
@@ -435,8 +463,6 @@ def run_many(dataset, exp_name):
     print(exp_name, 'Test acc {:.3f}% ({:.3f}%)'.format(test_acc_list.mean() * 100.0,
                                                         test_acc_list.std() * 100.0))
 
-    
-run_many(mnist, 'ours')
 
 def main():
     mnist = input_data.read_data_sets("data/mnist", one_hot=False)
