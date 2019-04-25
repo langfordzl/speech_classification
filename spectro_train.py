@@ -38,7 +38,7 @@ from tensorflow.contrib.learn.python.learn.datasets.mnist import DataSet
 from tensorflow.examples.tutorials.mnist import input_data
 from tqdm import tqdm
 
-from reweight import get_model, reweight_random, reweight_autodiff, reweight_hard_mining
+from reweight_spectro import get_model, reweight_random, reweight_autodiff, reweight_hard_mining
 from logger import get as get_logger
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
@@ -206,11 +206,11 @@ def get_imbalance_dataset(x_train,
     y_test_subset = np.concatenate([np.zeros([x_test_0.shape[0]]), np.ones([x_test_1.shape[0]])])
     y_train_pos_subset = np.ones([x_train_1.shape[0]])
     y_train_neg_subset = np.zeros([x_train_0.shape[0]])
-    x_train_subset = np.concatenate([x_train_0, x_train_1], axis=0).reshape([-1, 28, 28, 1])
-    x_val_subset = np.concatenate([x_val_0, x_val_1], axis=0).reshape([-1, 28, 28, 1])
-    x_test_subset = np.concatenate([x_test_0, x_test_1], axis=0).reshape([-1, 28, 28, 1])
-    x_train_pos_subset = x_train_1.reshape([-1, 28, 28, 1])
-    x_train_neg_subset = x_train_0.reshape([-1, 28, 28, 1])
+    x_train_subset = np.concatenate([x_train_0, x_train_1], axis=0).reshape([-1, 128, 128, 1])
+    x_val_subset = np.concatenate([x_val_0, x_val_1], axis=0).reshape([-1, 128, 128, 1])
+    x_test_subset = np.concatenate([x_test_0, x_test_1], axis=0).reshape([-1, 128, 128, 1])
+    x_train_pos_subset = x_train_1.reshape([-1, 128, 128, 1])
+    x_train_neg_subset = x_train_0.reshape([-1, 128, 128, 1])
     # Final shuffle.
     idx = np.arange(x_train_subset.shape[0])
     rnd.shuffle(idx)
@@ -320,9 +320,9 @@ def run(dataset, exp_name, seed, verbose=True):
             seed=seed)
         # if config.nval == 0:
         #     val_set = BalancedDataSet(train_pos_set, train_neg_set)
-        x_ = tf.placeholder(tf.float32, [None, 784], name='x')
+        x_ = tf.placeholder(tf.float32, [None, 16384], name='x')
         y_ = tf.placeholder(tf.float32, [None], name='y')
-        x_val_ = tf.placeholder(tf.float32, [None, 784], name='x_val')
+        x_val_ = tf.placeholder(tf.float32, [None, 16384], name='x_val')
         y_val_ = tf.placeholder(tf.float32, [None], name='y_val')
         ex_wts_ = tf.placeholder(tf.float32, [None], name='ex_wts')
         lr_ = tf.placeholder(tf.float32, [], name='lr')
@@ -421,25 +421,12 @@ def run(dataset, exp_name, seed, verbose=True):
             print('Final', 'Train acc', train_acc, 'Test acc', test_acc)
     return train_acc, test_acc
 
-
-#from keras.datasets import mnist
-#(x_train, y_train), (x_test, y_test) = mnist.load_data()
-#x_train = x_train.astype('float32')
-#x_test = x_test.astype('float32')
-#x_train /= 255
-#x_test /= 255
-
-#x_train = x_train.reshape(x_train.shape[0], 28*28)
-#x_test = x_test.reshape(x_test.shape[0], 28*28)
-#mnist2 = (x_train, y_train, x_test, y_test)
-#train_acc, test_acc = run(mnist2, 'ours', seed=0)
-
-
 from sklearn.model_selection import train_test_split
-x = np.load('xdata.npy')
-y = np.load('ydata.npy')
+x = np.load('xdata_128.npy')
+y = np.load('ydata_128.npy')
 
-x = x.reshape(x.shape[0], 28*28*1)
+x = x.reshape(x.shape[0], 128*128*1)
+
 xtrain, xtest, ytrain, ytest = train_test_split(x, y, test_size=0.25, random_state=1)
 xtrain = xtrain.astype('float32')
 xtest = xtest.astype('float32')
@@ -458,11 +445,9 @@ train_set, val_set, test_set, train_pos_set, train_neg_set = get_imbalance_datas
             ntest=400, 
             seed=0)
 
-
-
-
-
-
+for step in six.moves.xrange(400 // 100):
+    x_test2, y_test2 = test_set.next_batch(100)
+    print (y_test2.shape)
         
         
 def run_many(dataset, exp_name):

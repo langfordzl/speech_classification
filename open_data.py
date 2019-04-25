@@ -23,7 +23,7 @@ import seaborn as sns
 folders = os.listdir("train/audio")
 print(folders)
 
-
+# add test path
 train_audio_path = 'train/audio'
 train_labels = os.listdir(train_audio_path)
 print ('Number of labels:', len(train_labels))
@@ -45,7 +45,7 @@ train.info()
 label = train.label.unique()
 
 # let's grab two classes
-label2 = label[2:4]
+label2 = label[4:6]
 y = list()
 for i in range(len(labels)):
     for j in range(len(label2)):
@@ -57,16 +57,16 @@ y = np.asarray(y)
 print (np.array(np.unique(y, return_counts=True)).T)   
 
 # Let's subset x data
-train0 = train.file[train.label=='cat']
-train1 = train.file[train.label=='dog']
+train0 = train.file[train.label==label2[0]]
+train1 = train.file[train.label==label2[1]]
 df_train = pd.concat([train0,train1], axis=0)
 
 files0 = train0.values.tolist()
 files1 = train1.values.tolist()
 files = files0 + files1
 
-label0 = train.label[train.label=='cat']
-label1 = train.label[train.label=='dog']
+label0 = train.label[train.label==label2[0]]
+label1 = train.label[train.label==label2[1]]
 df_labels = pd.concat([label0,label1], axis=0)
 
 df_train = pd.concat([df_train,df_labels], axis=1)
@@ -90,29 +90,26 @@ def spectrogram(path):
     frequencies, times, spectrogram = signal.stft(samples, sample_rate, nperseg = sample_rate/50, noverlap = sample_rate/75)
     img = np.log(np.abs(spectrogram).T+eps)
     im = Image.fromarray(img)
-    img = im.resize((161,151), Image.ANTIALIAS)
+    img = im.resize((128,128), Image.ANTIALIAS)
     img = np.asarray(img)
     return img
 
-
-x = np.empty((0, 151, 161))  
+# 227
+x = np.empty((0, 128, 128))  
 x.shape     
 for i, file in enumerate(paths):
     print (i)
     img = spectrogram(file)
     x = np.append(x, [img], axis=0)
 
-<<<<<<< HEAD
+
 x = np.expand_dims(x, axis=3)        
-=======
-x2 = np.expand_dims(x, axis=3)        
->>>>>>> c62feaadde2ac46e429e348b4fc114c6dc58126d
 
-np.save('xdata.npy',x)
-np.save('ydata.npy',y)
+#np.save('xdata_150.npy',x)
+#np.save('ydata_150.npy',y)
 
-x = np.load('xdata.npy')
-y = np.load('ydata.npy')
+x = np.load('xdata_128.npy')
+y = np.load('ydata_128.npy')
 ########################################################################
 ########################################################################
 # Split data for training
@@ -130,23 +127,26 @@ x_imb = x_imb.reshape(x_imb.shape[0], 151, 161, 1)
 xtrain, xtest, ytrain, ytest = train_test_split(x_imb, y_imb, test_size=0.25, random_state=1)
 xtrain, xval, ytrain, yval = train_test_split(xtrain, ytrain, test_size=0.05, random_state=1)
 
+xtrain, xtest, ytrain, ytest = train_test_split(x, y, test_size=0.25, random_state=1)
+xtrain, xval, ytrain, yval = train_test_split(xtrain, ytrain, test_size=0.05, random_state=1)
+
+
 # print counts
 print ("Ytrain", np.array(np.unique(ytrain, return_counts=True)).T) 
 print ("Ytest", np.array(np.unique(ytest, return_counts=True)).T)
 print ("Yval", np.array(np.unique(yval, return_counts=True)).T)
 
-
 ########################################################################
 ########################################################################
 # CNN Training
-<<<<<<< HEAD
+
 
 num_classes = np.max(ytrain)+1
-=======
+
 batch_size = 64
 num_classes = len(y)
 epochs = 12
->>>>>>> c62feaadde2ac46e429e348b4fc114c6dc58126d
+
 
 import keras
 from keras.models import Sequential
@@ -172,19 +172,16 @@ model.compile(loss=keras.losses.sparse_categorical_crossentropy,
               optimizer=keras.optimizers.Adadelta(),
               metrics=['accuracy'])
 
-<<<<<<< HEAD
+
 earlyStopping = EarlyStopping(monitor='val_loss', patience=25, verbose=1, mode='min')
 mcp_save = ModelCheckpoint('.mdl_wts.hdf5', save_best_only=True, monitor='val_loss', mode='min')
 #reduce_lr_loss = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=7, verbose=1, epsilon=1e-4, mode='min')
 
-history = model.fit(xtrain, ytrain,
-          batch_size=32,
-          epochs=25,
-=======
+
+
 history = model.fit(xtrain, ytrain,
           batch_size=batch_size,
           epochs=epochs,
->>>>>>> c62feaadde2ac46e429e348b4fc114c6dc58126d
           verbose=1,
           validation_data=(xtest, ytest),
           callbacks=[earlyStopping, mcp_save])
@@ -207,16 +204,7 @@ plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
 plt.show()
 
-# list all data in history
-print(history.history.keys())
-# summarize history for accuracy
-plt.plot(history.history['acc'])
-plt.plot(history.history['val_acc'])
-plt.title('model accuracy')
-plt.ylabel('accuracy')
-plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
-plt.show()
+
 
 ########################################################################
 ########################################################################
