@@ -76,6 +76,7 @@ df_train = pd.concat([df_train,df_labels], axis=1)
 label0 = label0.values.tolist()
 label1 = label1.values.tolist()
 labels = label0 + label1
+# yes, zero 
 
 paths = list()
 for i, file in enumerate(files):
@@ -92,12 +93,12 @@ def spectrogram(path):
     frequencies, times, spectrogram = signal.stft(samples, sample_rate, nperseg = sample_rate/50, noverlap = sample_rate/75)
     img = np.log(np.abs(spectrogram).T+eps)
     im = Image.fromarray(img)
-    img = im.resize((227,227), Image.ANTIALIAS)
+    img = im.resize((28,28), Image.ANTIALIAS)
     img = np.asarray(img)
     return img
 
-# 227
-x = np.empty((0, 227, 227))  
+
+x = np.empty((0, 28, 28))  
 x.shape     
 for i, file in enumerate(paths):
     print (i)
@@ -107,11 +108,11 @@ for i, file in enumerate(paths):
 
 x = np.expand_dims(x, axis=3)        
 
-np.save('xdata_227.npy',x)
-np.save('ydata_227.npy',y)
+np.save('xdata_28.npy',x)
+np.save('ydata_28.npy',y)
 
-#x = np.load('xdata_128.npy')
-#y = np.load('ydata_128.npy')
+#x = np.load('xdata_28.npy')
+#y = np.load('ydata_28.npy')
 ########################################################################
 ########################################################################
 # Split data for training
@@ -209,25 +210,21 @@ plt.show()
 # Plots
 fig, ax = plt.subplots(figsize=(8, 8))
 sns.countplot(ax=ax, x="label", data=df_train)
+plt.show()
 print(df_train.label.unique())
-
 plt.close()
-
-def spectrogram2(file, label):
-    eps=1e-10
-    sample_rate, samples = wavfile.read(str(train_audio_path) + '/' + label + '/' + file)
-    frequencies, times, spectrogram = signal.stft(samples, sample_rate, nperseg = sample_rate/50, noverlap = sample_rate/75)
-    return np.log(np.abs(spectrogram).T+eps)
 
 
 num_samples = 5
 label = df_train.label.unique()
 fig, axes = plt.subplots(len(label),num_samples, figsize = (16, len(label)*4))
 for i,labels in enumerate(label):
-    files = df_train[df_train.label==labels].file.sample(num_samples)
+    files = paths[len(paths)-num_samples:len(paths)]
+    files = paths[0:num_samples]
+    print (files)
     axes[i][0].set_title(labels)
     for j, file in enumerate(files):
-        specgram = spectrogram2(file, labels)
+        specgram = spectrogram(file)
         print (specgram.shape)
         axes[i][j].axis('off')
         axes[i][j].matshow(specgram)
