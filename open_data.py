@@ -90,12 +90,12 @@ def spectrogram(path):
     frequencies, times, spectrogram = signal.stft(samples, sample_rate, nperseg = sample_rate/50, noverlap = sample_rate/75)
     img = np.log(np.abs(spectrogram).T+eps)
     im = Image.fromarray(img)
-    img = im.resize((128,128), Image.ANTIALIAS)
+    img = im.resize((98,98), Image.ANTIALIAS)
     img = np.asarray(img)
     return img
 
 # 227
-x = np.empty((0, 128, 128))  
+x = np.empty((0, 98, 98))  
 x.shape     
 for i, file in enumerate(paths):
     print (i)
@@ -105,8 +105,8 @@ for i, file in enumerate(paths):
 
 x = np.expand_dims(x, axis=3)        
 
-#np.save('xdata_150.npy',x)
-#np.save('ydata_150.npy',y)
+np.save('xdata_98.npy',x)
+np.save('ydata_98.npy',y)
 
 x = np.load('xdata_128.npy')
 y = np.load('ydata_128.npy')
