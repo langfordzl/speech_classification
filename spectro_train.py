@@ -206,11 +206,11 @@ def get_imbalance_dataset(x_train,
     y_test_subset = np.concatenate([np.zeros([x_test_0.shape[0]]), np.ones([x_test_1.shape[0]])])
     y_train_pos_subset = np.ones([x_train_1.shape[0]])
     y_train_neg_subset = np.zeros([x_train_0.shape[0]])
-    x_train_subset = np.concatenate([x_train_0, x_train_1], axis=0).reshape([-1, 98,  98, 1])
-    x_val_subset = np.concatenate([x_val_0, x_val_1], axis=0).reshape([-1, 98, 98, 1])
-    x_test_subset = np.concatenate([x_test_0, x_test_1], axis=0).reshape([-1, 98, 98, 1])
-    x_train_pos_subset = x_train_1.reshape([-1,  98,  98, 1])
-    x_train_neg_subset = x_train_0.reshape([-1,  98,  98, 1])
+    x_train_subset = np.concatenate([x_train_0, x_train_1], axis=0).reshape([-1, 227,  227, 1])
+    x_val_subset = np.concatenate([x_val_0, x_val_1], axis=0).reshape([-1, 227, 227, 1])
+    x_test_subset = np.concatenate([x_test_0, x_test_1], axis=0).reshape([-1, 227, 227, 1])
+    x_train_pos_subset = x_train_1.reshape([-1,  227,  227, 1])
+    x_train_neg_subset = x_train_0.reshape([-1,  227,  227, 1])
     # Final shuffle.
     idx = np.arange(x_train_subset.shape[0])
     rnd.shuffle(idx)
@@ -320,9 +320,9 @@ def run(dataset, exp_name, seed, verbose=True):
             seed=seed)
         # if config.nval == 0:
         #     val_set = BalancedDataSet(train_pos_set, train_neg_set)
-        x_ = tf.placeholder(tf.float32, [None, 9604], name='x')
+        x_ = tf.placeholder(tf.float32, [None, 51529], name='x')
         y_ = tf.placeholder(tf.float32, [None], name='y')
-        x_val_ = tf.placeholder(tf.float32, [None, 9604], name='x_val')
+        x_val_ = tf.placeholder(tf.float32, [None, 51529], name='x_val')
         y_val_ = tf.placeholder(tf.float32, [None], name='y_val')
         ex_wts_ = tf.placeholder(tf.float32, [None], name='ex_wts')
         lr_ = tf.placeholder(tf.float32, [], name='lr')
@@ -422,10 +422,10 @@ def run(dataset, exp_name, seed, verbose=True):
     return train_acc, test_acc
 
 from sklearn.model_selection import train_test_split
-x = np.load('xdata_98.npy')
-y = np.load('ydata_98.npy')
+x = np.load('xdata_227.npy')
+y = np.load('ydata_227.npy')
 
-x = x.reshape(x.shape[0], 98*98*1)
+x = x.reshape(x.shape[0], 227*227*1)
 
 xtrain, xtest, ytrain, ytest = train_test_split(x, y, test_size=0.25, random_state=1)
 xtrain = xtrain.astype('float32')
@@ -449,7 +449,7 @@ for step in six.moves.xrange(400 // 100):
     x_test2, y_test2 = test_set.next_batch(100)
     print (y_test2.shape)
         
-        
+     
 def run_many(dataset, exp_name):
     train_acc_list = []
     test_acc_list = []

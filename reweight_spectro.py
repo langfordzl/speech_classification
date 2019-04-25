@@ -48,7 +48,7 @@ def get_model(inputs,
             return var
 
     with tf.variable_scope('Model', reuse=reuse):
-        inputs_ = tf.cast(tf.reshape(inputs, [-1, 98, 98, 1]), dtype)
+        inputs_ = tf.cast(tf.reshape(inputs, [-1, 32, 32, 1]), dtype)
         labels = tf.cast(labels, dtype)
 
         w_init = tf.truncated_normal_initializer(stddev=0.1)

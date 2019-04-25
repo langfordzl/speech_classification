@@ -44,8 +44,10 @@ train = pd.DataFrame({'file':wavs,'label':labels})
 train.info()
 label = train.label.unique()
 
+print ("Labels", np.array(np.unique(labels, return_counts=True)).T) 
+
 # let's grab two classes
-label2 = label[4:6]
+label2 = label[28:30]
 y = list()
 for i in range(len(labels)):
     for j in range(len(label2)):
@@ -90,12 +92,12 @@ def spectrogram(path):
     frequencies, times, spectrogram = signal.stft(samples, sample_rate, nperseg = sample_rate/50, noverlap = sample_rate/75)
     img = np.log(np.abs(spectrogram).T+eps)
     im = Image.fromarray(img)
-    img = im.resize((98,98), Image.ANTIALIAS)
+    img = im.resize((227,227), Image.ANTIALIAS)
     img = np.asarray(img)
     return img
 
 # 227
-x = np.empty((0, 98, 98))  
+x = np.empty((0, 227, 227))  
 x.shape     
 for i, file in enumerate(paths):
     print (i)
@@ -105,11 +107,11 @@ for i, file in enumerate(paths):
 
 x = np.expand_dims(x, axis=3)        
 
-np.save('xdata_98.npy',x)
-np.save('ydata_98.npy',y)
+np.save('xdata_227.npy',x)
+np.save('ydata_227.npy',y)
 
-x = np.load('xdata_128.npy')
-y = np.load('ydata_128.npy')
+#x = np.load('xdata_128.npy')
+#y = np.load('ydata_128.npy')
 ########################################################################
 ########################################################################
 # Split data for training
@@ -120,8 +122,8 @@ from sklearn.model_selection import train_test_split
 print ("Y", np.array(np.unique(y, return_counts=True)).T) 
 x = x.reshape(x.shape[0],x.shape[1]*x.shape[2]*x.shape[3])
 x_imb, y_imb = make_imbalance(x, y, ratio={0: 1733, 1: 500}, random_state=0)
-x = x.reshape(x.shape[0], 151, 161, 1)
-x_imb = x_imb.reshape(x_imb.shape[0], 151, 161, 1)
+x = x.reshape(x.shape[0], 98, 98, 1)
+x_imb = x_imb.reshape(x_imb.shape[0], 98, 98, 1)
 
 # Split data train, test, validation (25 samples per class)
 xtrain, xtest, ytrain, ytest = train_test_split(x_imb, y_imb, test_size=0.25, random_state=1)
@@ -139,8 +141,6 @@ print ("Yval", np.array(np.unique(yval, return_counts=True)).T)
 ########################################################################
 ########################################################################
 # CNN Training
-
-
 num_classes = np.max(ytrain)+1
 
 batch_size = 64
@@ -154,7 +154,7 @@ from keras.layers import Dense, Dropout, Flatten
 from keras.layers import Conv2D, MaxPooling2D
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 
-input_shape = (151, 161, 1)
+input_shape = (98, 98, 1)
 
 model = Sequential()
 model.add(Conv2D(32, kernel_size=(3, 3),
@@ -176,7 +176,6 @@ model.compile(loss=keras.losses.sparse_categorical_crossentropy,
 earlyStopping = EarlyStopping(monitor='val_loss', patience=25, verbose=1, mode='min')
 mcp_save = ModelCheckpoint('.mdl_wts.hdf5', save_best_only=True, monitor='val_loss', mode='min')
 #reduce_lr_loss = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=7, verbose=1, epsilon=1e-4, mode='min')
-
 
 
 history = model.fit(xtrain, ytrain,
@@ -203,7 +202,6 @@ plt.ylabel('accuracy')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
 plt.show()
-
 
 
 ########################################################################

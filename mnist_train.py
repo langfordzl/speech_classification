@@ -436,8 +436,8 @@ def run(dataset, exp_name, seed, verbose=True):
 
 
 from sklearn.model_selection import train_test_split
-x = np.load('xdata.npy')
-y = np.load('ydata.npy')
+x = np.load('xdata_28.npy')
+y = np.load('ydata_28.npy')
 
 x = x.reshape(x.shape[0], 28*28*1)
 xtrain, xtest, ytrain, ytest = train_test_split(x, y, test_size=0.25, random_state=1)
@@ -445,7 +445,7 @@ xtrain = xtrain.astype('float32')
 xtest = xtest.astype('float32')
 
 mnist2 = (xtrain, ytrain, xtest, ytest)
-train_acc, test_acc = run(mnist2, 'baseline', seed=0)
+train_acc, test_acc = run(mnist2, 'ours', seed=0)
 
 train_set, val_set, test_set, train_pos_set, train_neg_set = get_imbalance_dataset(
             mnist2[0],
